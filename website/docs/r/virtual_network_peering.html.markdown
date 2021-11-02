@@ -117,15 +117,22 @@ The following arguments are supported:
 * `name` - (Required) The name of the virtual network peering. Changing this
     forces a new resource to be created.
 
-* `virtual_network_name` - (Required) The name of the virtual network. Changing
-    this forces a new resource to be created.
+* `resource_group_name` - (Optional) The name of the resource group in which the
+    local virtual network exists. Changing this forces a new resource to be
+    created.
+
+-> **NOTE:** This property has been deprecated in favour of the `virtual_network_id` property and will be removed in version 3.0 of the provider.
+
+* `virtual_network_name` - (Optional) The name of the local virtual network.
+    Changing this forces a new resource to be created.
+
+-> **NOTE:** This property has been deprecated in favour of the `virtual_network_id` property and will be removed in version 3.0 of the provider.
+
+* `virtual_network_id` - (Optional) The id of the local virtual network.
+    Changing this forces a new resource to be created.
 
 * `remote_virtual_network_id` - (Required) The full Azure resource ID of the
     remote virtual network.  Changing this forces a new resource to be created.
-
-* `resource_group_name` - (Required) The name of the resource group in which to
-    create the virtual network peering. Changing this forces a new resource to be
-    created.
 
 * `allow_virtual_network_access` - (Optional) Controls if the VMs in the remote
     virtual network can access VMs in the local virtual network. Defaults to

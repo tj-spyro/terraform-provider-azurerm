@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-provider-azurerm/helpers/tf"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/clients"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/services/network/parse"
+	"github.com/hashicorp/terraform-provider-azurerm/internal/services/network/validate"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/tf/pluginsdk"
 	"github.com/hashicorp/terraform-provider-azurerm/internal/timeouts"
 	"github.com/hashicorp/terraform-provider-azurerm/utils"
@@ -46,12 +47,50 @@ func resourceVirtualNetworkPeering() *pluginsdk.Resource {
 				ForceNew: true,
 			},
 
-			"resource_group_name": azure.SchemaResourceGroupName(),
+			// TODO: remove in 3.0
+			"resource_group_name": {
+				Type:         pluginsdk.TypeString,
+				Optional:     true,
+				Computed:     true,
+				ForceNew:     true,
+				ValidateFunc: azure.ValidateResourceGroupName,
+				Deprecated:   "Deprecated in favour of `virtual_network_id`",
+				RequiredWith: []string{
+					"virtual_network_name",
+				},
+				ConflictsWith: []string{
+					"virtual_network_id",
+				},
+			},
 
+			// TODO: remove in 3.0
 			"virtual_network_name": {
-				Type:     pluginsdk.TypeString,
-				Required: true,
-				ForceNew: true,
+				Type:       pluginsdk.TypeString,
+				Optional:   true,
+				Computed:   true,
+				ForceNew:   true,
+				Deprecated: "Deprecated in favour of `virtual_network_id`",
+				RequiredWith: []string{
+					"resource_group_name",
+				},
+				ConflictsWith: []string{
+					"virtual_network_id",
+				},
+			},
+
+			"virtual_network_id": {
+				Type: pluginsdk.TypeString,
+				// TODO: Make required in 3.0
+				Optional: true,
+				// TODO: Remove in 3.0
+				Computed:     true,
+				ForceNew:     true,
+				ValidateFunc: validate.VirtualNetworkID,
+				// TODO: Remove in 3.0
+				ConflictsWith: []string{
+					"resource_group_name",
+					"virtual_network_name",
+				},
 			},
 
 			"remote_virtual_network_id": {
@@ -98,16 +137,30 @@ func resourceVirtualNetworkPeeringCreateUpdate(d *pluginsdk.ResourceData, meta i
 	vnetName := d.Get("virtual_network_name").(string)
 	resGroup := d.Get("resource_group_name").(string)
 
+	raw, ok := d.GetOk("virtual_network_id")
+	if ok {
+		parsedStorageAccountId, err := parse.VirtualNetworkID(raw.(string))
+		if err != nil {
+			return err
+		}
+
+		vnetName = parsedStorageAccountId.Name
+		resGroup = parsedStorageAccountId.ResourceGroup
+	}
+
+	subscriptionId := meta.(*clients.Client).Account.SubscriptionId
+	id := parse.NewVirtualNetworkPeeringID(subscriptionId, resGroup, vnetName, name)
+
 	if d.IsNewResource() {
 		existing, err := client.Get(ctx, resGroup, vnetName, name)
 		if err != nil {
 			if !utils.ResponseWasNotFound(existing.Response) {
-				return fmt.Errorf("checking for presence of existing Peering %q (Virtual Network %q / Resource Group %q): %s", name, vnetName, resGroup, err)
+				return fmt.Errorf("checking for presence of %s: %+v", id, err)
 			}
 		}
 
 		if existing.ID != nil && *existing.ID != "" {
-			return tf.ImportAsExistsError("azurerm_virtual_network_peering", *existing.ID)
+			return tf.ImportAsExistsError("azurerm_virtual_network_peering", id.ID())
 		}
 	}
 
@@ -123,15 +176,7 @@ func resourceVirtualNetworkPeeringCreateUpdate(d *pluginsdk.ResourceData, meta i
 		return err
 	}
 
-	read, err := client.Get(ctx, resGroup, vnetName, name)
-	if err != nil {
-		return err
-	}
-	if read.ID == nil {
-		return fmt.Errorf("Cannot read ID of Virtual Network Peering %q (resource group %q)", name, resGroup)
-	}
-
-	d.SetId(*read.ID)
+	d.SetId(id.ID())
 
 	return resourceVirtualNetworkPeeringRead(d, meta)
 }
@@ -149,10 +194,11 @@ func resourceVirtualNetworkPeeringRead(d *pluginsdk.ResourceData, meta interface
 	resp, err := client.Get(ctx, id.ResourceGroup, id.VirtualNetworkName, id.Name)
 	if err != nil {
 		if utils.ResponseWasNotFound(resp.Response) {
+			log.Printf("[INFO] synapse %q does not exist - removing from state", d.Id())
 			d.SetId("")
 			return nil
 		}
-		return fmt.Errorf("making Read request on %s: %+v", *id, err)
+		return fmt.Errorf("retrieving %s: %+v", *id, err)
 	}
 
 	// update appropriate values
