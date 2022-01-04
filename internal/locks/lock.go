@@ -13,6 +13,11 @@ func ByName(name string, resourceType string) {
 	armMutexKV.Lock(updatedName)
 }
 
+// ByType locks the entire Resource Type
+func ByType(resourceType string) {
+	armMutexKV.Lock(resourceType)
+}
+
 func MultipleByName(names *[]string, resourceType string) {
 	newSlice := removeDuplicatesFromStringArray(*names)
 
@@ -28,6 +33,11 @@ func UnlockByID(id string) {
 func UnlockByName(name string, resourceType string) {
 	updatedName := resourceType + "." + name
 	armMutexKV.Unlock(updatedName)
+}
+
+// UnlockByType unlocks the entire Resource Type
+func UnlockByType(resourceType string) {
+	armMutexKV.Unlock(resourceType)
 }
 
 func UnlockMultipleByName(names *[]string, resourceType string) {

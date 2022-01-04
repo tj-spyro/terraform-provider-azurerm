@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"log"
 	"strings"
-	"sync"
 	"time"
+
+	"github.com/hashicorp/terraform-provider-azurerm/internal/locks"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 
@@ -25,9 +26,7 @@ import (
 	"github.com/hashicorp/terraform-provider-azurerm/utils"
 )
 
-// peerMutex is used to prevent multiple Peering resources being created, updated
-// or deleted at the same time
-var peerMutex = &sync.Mutex{}
+const virtualNetworkPeeringType = "azurerm_virtual_network_peering"
 
 func resourceVirtualNetworkPeering() *pluginsdk.Resource {
 	return &pluginsdk.Resource{
@@ -166,7 +165,7 @@ func resourceVirtualNetworkPeeringCreate(d *pluginsdk.ResourceData, meta interfa
 	}
 
 	if !utils.ResponseWasNotFound(existing.Response) {
-		return tf.ImportAsExistsError("azurerm_virtual_network_peering", id.ID())
+		return tf.ImportAsExistsError(virtualNetworkPeeringType, id.ID())
 	}
 
 	model := network.VirtualNetworkPeering{
@@ -181,8 +180,8 @@ func resourceVirtualNetworkPeeringCreate(d *pluginsdk.ResourceData, meta interfa
 		},
 	}
 
-	peerMutex.Lock()
-	defer peerMutex.Unlock()
+	locks.ByType(virtualNetworkPeeringType)
+	defer locks.UnlockByType(virtualNetworkPeeringType)
 
 	timeout, _ := ctx.Deadline()
 	stateConf := &pluginsdk.StateChangeConf{
@@ -260,8 +259,8 @@ func resourceVirtualNetworkPeeringUpdate(d *pluginsdk.ResourceData, meta interfa
 		return err
 	}
 
-	peerMutex.Lock()
-	defer peerMutex.Unlock()
+	locks.ByType(virtualNetworkPeeringType)
+	defer locks.UnlockByType(virtualNetworkPeeringType)
 
 	existing, err := client.Get(ctx, id.ResourceGroup, id.VirtualNetworkName, id.Name)
 	if err != nil {
@@ -315,8 +314,8 @@ func resourceVirtualNetworkPeeringDelete(d *pluginsdk.ResourceData, meta interfa
 		return err
 	}
 
-	peerMutex.Lock()
-	defer peerMutex.Unlock()
+	locks.ByType(virtualNetworkPeeringType)
+	defer locks.UnlockByType(virtualNetworkPeeringType)
 
 	future, err := client.Delete(ctx, id.ResourceGroup, id.VirtualNetworkName, id.Name)
 	if err != nil {
