@@ -77,19 +77,19 @@ func resourceVirtualNetworkPeering() *pluginsdk.Resource {
 				"allow_forwarded_traffic": {
 					Type:     pluginsdk.TypeBool,
 					Optional: true,
-					Computed: true,
+					Default:  false,
 				},
 
 				"allow_gateway_transit": {
 					Type:     pluginsdk.TypeBool,
 					Optional: true,
-					Computed: true,
+					Default:  false,
 				},
 
 				"use_remote_gateways": {
 					Type:     pluginsdk.TypeBool,
 					Optional: true,
-					Computed: true,
+					Default:  false,
 				},
 			}
 
