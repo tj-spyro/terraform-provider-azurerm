@@ -302,9 +302,10 @@ func TestAccLinuxFunctionAppSlot_consumptionComplete(t *testing.T) {
 			Config: r.consumptionComplete(data),
 			Check: acceptance.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
+				check.That(data.ResourceName).Key("app_settings.WEBSITE_CONTENTSHARE").IsSet(),
 			),
 		},
-		data.ImportStep("site_credential.0.password"),
+		data.ImportStep("app_settings.WEBSITE_CONTENTSHARE", "site_credential.0.password"),
 	})
 }
 
@@ -318,21 +319,24 @@ func TestAccLinuxFunctionAppSlot_consumptionCompleteUpdate(t *testing.T) {
 			Check: acceptance.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
 				check.That(data.ResourceName).Key("kind").HasValue("functionapp,linux"),
+				check.That(data.ResourceName).Key("app_settings.WEBSITE_CONTENTSHARE").IsSet(),
 			),
 		},
-		data.ImportStep("site_credential.0.password"),
+		data.ImportStep("app_settings.WEBSITE_CONTENTSHARE", "site_credential.0.password"),
 		{
 			Config: r.consumptionComplete(data),
 			Check: acceptance.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
+				check.That(data.ResourceName).Key("app_settings.WEBSITE_CONTENTSHARE").IsSet(),
 			),
 		},
-		data.ImportStep("site_credential.0.password"),
+		data.ImportStep("app_settings.WEBSITE_CONTENTSHARE", "site_credential.0.password"),
 		{
 			Config: r.basic(data, SkuConsumptionPlan),
 			Check: acceptance.ComposeTestCheckFunc(
 				check.That(data.ResourceName).ExistsInAzure(r),
 				check.That(data.ResourceName).Key("kind").HasValue("functionapp,linux"),
+				check.That(data.ResourceName).Key("app_settings.WEBSITE_CONTENTSHARE").IsSet(),
 			),
 		},
 	})
